@@ -1,3 +1,15 @@
+"""
+File: ArtificialBeeColony.py
+Author: Angel Sanz Gutierrez
+Contact: sanzangel017@gmail.com
+GitHub: AngelS017
+Description: All clases and function to apply ABC in a TSP
+Version: 1.0
+
+This file is part of ABC algorithm for TSP, which is licensed under the MIT License.
+See the LICENSE file in the project root for more information.
+"""
+
 import numpy as np
 import math
 import random
