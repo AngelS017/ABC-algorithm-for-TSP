@@ -173,9 +173,12 @@ class Bee:
         distance_matrix: array-like
             The matrix that conteins the euclidian distance between each point.
 
+        k : int
+            The number of the k-opt method that is going to perform.
+
         Returns
         -------
-        
+        best_path : The best path found during the generation of the new solution
 
         """
         all_paths = self.mutation_strategy(self.path_len, self.path, k)
@@ -443,7 +446,7 @@ class ArtificialBeeColonyOptimizer:
 
         Returns
         -------
-        paths : All the paths founds during training
+        execution_time : The time taken to train the ABC model
         paths_distances : The distance of all the paths founds during training
         final_best_path : The best path found after training
         final_best_path_distance : The distance of the best path found
