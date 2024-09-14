@@ -3,10 +3,10 @@ File: ArtificialBeeColony.py
 Author: Angel Sanz Gutierrez
 Contact: sanzangel017@gmail.com
 GitHub: AngelS017
-Description: All clases and function to apply ABC in a TSP
+Description: All clases and function to apply ABC in the TSP
 Version: 1.0
 
-This file is part of ABC algorithm for TSP, which is licensed under the MIT License.
+This file is the ABC algorithm for TSP, which is licensed under the MIT License.
 See the LICENSE file in the project root for more information.
 """
 
@@ -302,7 +302,7 @@ class ArtificialBeeColonyOptimizer:
             bee.trial += 1
 
     def caclulate_probabilities(self):
-        """Compute the probability of choosing each bee in the colony, where the distance path of
+        """Compute the probability of choosing each solution in the colony, where the distance path of
            each bee is divided by the sum of all distances in the colony
 
         Parameters
@@ -346,8 +346,7 @@ class ArtificialBeeColonyOptimizer:
                 return self.colony[index]
         return self.colony[-1]
         """
-
-        
+       
 
     def onlooker_bee_behavior(self, bee, probabilities_bee_solution):
         """The bee will perform the onlooker behavior, in which a possible solution will be 
