@@ -24,9 +24,9 @@
 </details>
 
 
-## :memo: About The Project
+## :memo: About The Project <a id="about-the-project"></a>
 
-## :wrench: Prerequisites
+## :wrench: Prerequisites <a id="prerequisites"></a>
 
 The following open source packages are used to develop this project:
 * numpy
@@ -42,11 +42,14 @@ The anaconda environment can be created as follows:
 
     conda env create -f ABC_for_TSP.yml
 
-## :gear: Installation
+## :gear: Installation <a id="installation"></a>
+
+Once all the prerequisites packages have been installed, the package for the algorithm Artificial Bee Colony can be installed for use in solving the Travel Salesman Problem.
+
+    pip install abc-tsp
 
 
-
-## :file_folder: Folder Structure
+## :file_folder: Folder Structure <a id="folder-structure"></a>
 
     ABC-ALGORITHM-FOR-TSP
     ├── ABC_algorithm_TSP.ipynb
@@ -76,7 +79,7 @@ The anaconda environment can be created as follows:
     │       └── normal_training_comparison.png
 
 
-## :books: Dataset
+## :books: Dataset <a id="dataset"></a>
 
 The data that we are going to use in this proyect will be obtein from a web call [National TSP](https://www.math.uwaterloo.ca/tsp/world/countries.html) from the University of Waterloo.
 
@@ -106,8 +109,27 @@ The website provides information on the optimal solution, among other things:
 * **Time:** 1681.68 seconds, AMD Athlon 1.33 GHz
 
 
-## :computer: Test Environment
+## :computer: Test Environment <a id="test-environment"></a>
 
-## :mag_right: Results and Discussion
+The testing and algorithm development were conducted in a controlled environment with the following hardware and software configuration:
 
-## :link: References
+* Processor (CPU): Intel Core i9-14900HX up to 5.8 GHz Max Turbo (24 cores, 32 threads)
+* Memory (RAM): 32 GB DDR5 at 5600 MHz
+* Graphics Card (GPU): NVIDIA GeForce RTX 3080 Ti with 12 GB VRAM
+* Operating System: Windows 11 (64-bit)
+* Python Version: 3.12.4
+* Key Libraries and Dependencies:
+
+  * numpy 2.0.1
+  * matplotlib 3.9.1
+  * pandas 2.2.2
+  * tqdm 4.66.5
+  * scipy 1.14.0
+
+
+Benchmark results and time analyses are included in the Results section of this repository.
+
+
+## :mag_right: Results and Discussion <a id="results-and-discussion"></a>
+
+## :link: References <a id="references"></a>

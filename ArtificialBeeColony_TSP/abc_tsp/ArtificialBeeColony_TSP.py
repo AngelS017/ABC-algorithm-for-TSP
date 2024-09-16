@@ -406,10 +406,12 @@ class ArtificialBeeColonyOptimizer:
         None
 
         """
+        num_employed_bees = math.floor(self.population * self.employed_percentage)
 
         num_cities = self.distance_matrix.shape[0]
         other_cities = np.delete(np.arange(num_cities), self.ini_end_city)
-        for bee in self.colony:
+
+        for bee in self.colony[:num_employed_bees]:
             if bee.trial > self.limit:
                 random_path = np.insert(np.random.permutation(other_cities), [0, len(other_cities)], self.ini_end_city)
 
@@ -488,3 +490,23 @@ class ArtificialBeeColonyOptimizer:
         execution_time = end - start
 
         return execution_time, paths_distances, final_best_path, final_best_path_distance
+    
+
+    def print_colony(self):
+        """Print some information such as roles, path distance and trials of each bee in the colony.
+
+        Parameters
+        ----------
+        self : ArtificialBeeColonyOptimizer
+            The instance of the optimizer that manages the bee colony.
+
+        Returns
+        -------
+
+        """
+        for index, bee in enumerate(self.colony):
+            print("Bee ", index, ": ", bee.role)
+            print("Path distance: ", bee.path_distance)
+            print("Trial: ", bee.trial)
+            print("__________\n")
+
