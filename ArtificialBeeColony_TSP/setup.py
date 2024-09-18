@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as file:
 
 setup(
     name="abc_tsp",
-    version="2.0.0",
+    version="2.0.1",
     license='MIT',
     author="Angel Sanz Gutierrez",
     author_email="sanzangel017@gmail.com",
