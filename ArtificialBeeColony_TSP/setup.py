@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as file:
 
 setup(
     name="abc_tsp",
-    version="1.0.3",
+    version="2.0.0",
     license='MIT',
     author="Angel Sanz Gutierrez",
     author_email="sanzangel017@gmail.com",
@@ -23,6 +23,7 @@ setup(
     install_requires=[
         'numpy>=1.20',
         'tqdm',
+        'joblib',
     ],
-    python_requires='>=3.7'
+    python_requires='>=3.8'
 )

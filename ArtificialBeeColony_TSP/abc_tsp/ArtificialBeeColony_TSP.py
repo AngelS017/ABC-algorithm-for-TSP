@@ -4,7 +4,7 @@ Author: Angel Sanz Gutierrez
 Contact: sanzangel017@gmail.com
 GitHub: AngelS017
 Description: All clases and function to apply ABC in the TSP
-Version: 1.0
+Version: 2.0.0
 
 This file is the ABC algorithm for TSP, which is licensed under the MIT License.
 See the LICENSE file in the project root for more information.
@@ -16,6 +16,7 @@ import random
 from tqdm import tqdm
 import time
 import itertools
+from joblib import Parallel, delayed
 
 
 class Bee:
@@ -447,10 +448,17 @@ class ArtificialBeeColonyOptimizer:
 
         Returns
         -------
-        execution_time : The time taken to train the ABC model
-        paths_distances : The distance of all the paths founds during training
-        final_best_path : The best path found after training
-        final_best_path_distance : The distance of the best path found
+        execution_time : float 
+            The time taken to train the ABC model.
+        
+        paths_distances : list
+            The distances of all the paths founds during training.
+        
+        final_best_path: list
+            The best path (sequence of cities) found by the ABC algorithm in this run.
+            
+        final_best_path_distance: float
+            The total distance of the best path found during this run.
 
         """
         start = time.time()
@@ -490,7 +498,152 @@ class ArtificialBeeColonyOptimizer:
         execution_time = end - start
 
         return execution_time, paths_distances, final_best_path, final_best_path_distance
-    
+
+    @staticmethod
+    def run_single_params(ini_end_city, distance_matrix, params):
+        """Train the ABC algorithm using a specific set of hyperparameters.
+
+        Parameters
+        ----------
+        ini_end_city : int
+            The index of the city where the path is going to start and end. This is used to ensure that 
+            the generated paths in the optimization start and finish at the same city.
+        
+        distance_matrix: array-like
+            The matrix that conteins the euclidian distance between each point.
+
+        param_grid: dict
+            A dictionary where the keys are the hyperparameter names (e.g., 'population', 'employed_percentage') 
+            and the values of each hyperparameter to fit the ABC algorithm.
+
+
+        Returns
+        -------
+        params: dict
+            The same hyperparameters used for this specific run of the ABC algorithm.
+        
+        final_best_path: list
+            The best path found by the ABC algorithm in this run.
+            
+        final_best_path_distance: float
+            The total distance of the best path found during this run.
+
+        """
+
+        abc_optimizer = ArtificialBeeColonyOptimizer(
+        ini_end_city=ini_end_city,
+        population=params["population"],
+        employed_percentage=params["employed_percentage"],
+        limit=params["limit"],
+        epochs=params["epochs"],
+        distance_matrix=distance_matrix,
+        employed_mutation_strategy=params["employed_mutation_strategy"],
+        onlooker_mutation_strategy=params["onlooker_mutation_strategy"],
+        k_employed=params["k_employed"],
+        k_onlooker=params["k_onlooker"],
+        verbose=0
+        )
+
+        _, _, final_best_path, final_best_path_distance = abc_optimizer.fit()
+
+        return params, final_best_path, final_best_path_distance
+
+    @staticmethod
+    def grid_search_abc(distance_matrix, ini_end_city, param_grid, n_jobs=1, refit=False):
+        """
+        Parameters
+        ----------
+        distance_matrix: array-like
+            The matrix that conteins the euclidian distance between each point.
+
+        ini_end_city : int
+            The index of the city where the path is going to start and end. This is used to ensure that 
+            the generated paths in the optimization start and finish at the same city.
+
+        param_grid: dict
+            A dictionary where the keys are the hyperparameter names (e.g., 'population', 'employed_percentage') 
+            and the values are lists of possible values for those hyperparameters. The grid search will 
+            try all combinations of these values.
+
+        n_jobs: int, optional, default=1
+            The number of jobs to run in parallel for the grid search. If `n_jobs` is set to -1, it uses all 
+            available processors. If it is set to 1, the grid search will run sequentially.
+
+        refit: bool, optional, default=False
+            If True, the model will be refit using the best hyperparameters found during the grid search. 
+            The final results, including the execution time, paths, and distances, will be included in the output.
+
+        Returns
+        -------
+        output: dict
+            A dictionary containing the following keys:
+            
+            - 'best_params': dict
+                The combination of hyperparameters that achieved the best performance (i.e., minimized the path distance).
+            
+            - 'best_distance': float
+                The shortest path distance found during the grid search.
+            
+            If refit is set to True, additional keys are included:
+            
+            - 'execution_time': float
+                The time taken to refit the model using the best parameters.
+            
+            - 'paths_distances': list
+                A list of distances for each path iteration during the refitting process.
+            
+            - 'final_best_path': list
+                The best path found after refitting the model using the optimal hyperparameters.
+            
+            - 'final_best_path_distance': float
+                The distance of the best path found after refitting the model.
+
+        """
+        best_distance = np.inf
+        best_params = None
+
+        keys = param_grid.keys()
+        values = param_grid.values()
+
+        combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+        results = Parallel(n_jobs=n_jobs)(delayed(ArtificialBeeColonyOptimizer.run_single_params)(ini_end_city, distance_matrix, params) for params in combinations)
+
+        for params, path, distance in results:
+            if distance < best_distance:
+                best_distance = distance
+                best_params = params
+
+        output = {
+            'best_params': best_params,
+            'best_distance': best_distance
+        }
+
+        if refit:
+            abc_optimizer = ArtificialBeeColonyOptimizer(
+                ini_end_city=ini_end_city,
+                population=best_params["population"],
+                employed_percentage=best_params["employed_percentage"],
+                limit=best_params["limit"],
+                epochs=best_params["epochs"],
+                distance_matrix=distance_matrix,
+                employed_mutation_strategy=best_params["employed_mutation_strategy"],
+                onlooker_mutation_strategy=best_params["onlooker_mutation_strategy"],
+                k_employed=best_params["k_employed"],
+                k_onlooker=best_params["k_onlooker"],
+                verbose=0
+            )
+
+            execution_time, paths_distances, final_best_path, final_best_path_distance = abc_optimizer.fit()
+
+            output = ({
+                'execution_time': execution_time,
+                'paths_distances': paths_distances,
+                'final_best_path': final_best_path,
+                'final_best_path_distance': final_best_path_distance
+            })
+
+        return output
 
     def print_colony(self):
         """Print some information such as roles, path distance and trials of each bee in the colony.

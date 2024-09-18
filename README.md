@@ -32,8 +32,9 @@ The following open source packages are used to develop this project:
 * numpy
 * matplotlib
 * pandas
-* tqdm
 * scipy
+* tqdm
+* joblib
 
 
 Furthermore, the environment utilized for the development of the ABC algorithm for the TSP can be used directly for your purposes.

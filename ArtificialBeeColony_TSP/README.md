@@ -1,7 +1,7 @@
 # Artificial Bee Colony (ABC) for Solving the Traveling Salesman Problem (TSP)
 
 ![Artificial Bee Colony](https://img.shields.io/badge/Artificial%20Bee%20Colony-ABC%20Algorithm-blue.svg) 
-![Python](https://img.shields.io/badge/Python-3.7%2B-brightgreen.svg)
+![Python](https://img.shields.io/badge/Python-3.8%2B-brightgreen.svg)
 ![TSP](https://img.shields.io/badge/Problem-TSP-orange.svg) 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
@@ -10,6 +10,7 @@ This project implements an Artificial Bee Colony (ABC) algorithm for solving the
 
 ## Table of Contents
 - [Author and contact](#author-and-contact)
+- [Version History](#version-history)
 - [Overview](#overview)
 - [Algorithm Workflow](#algorithm-workflow)
 - [Folder Structure](#folder-structure)
@@ -28,6 +29,14 @@ Contact: sanzangel017@gmail.com\
 GitHub: AngelS017\
 License: MIT License
 
+## Version History
+
+### [v 2.0.0] - 2024-09-17
+- Added new functionality in ArtificialBeeColonyOptimizer: grid_search_abc()
+- Updated the minimum required Python version to 3.8
+
+### [v 1.0.3] - 2023-09-14
+- Initial release of the Artificial Bee Colony for TSP,
 
 ## Overview
 
@@ -92,8 +101,9 @@ This implementation provides a flexible ABC framework, allowing users to:
 The following open source packages are used to develop this algorithm:
 * numpy >= 1.20
 * tqdm
+* joblib
 
-Additionally, the software requires the Python 3.7 or higher version, as this is the minimum version supported by the tqmd packages.
+Additionally, the software requires the Python 3.8 or higher version, as this is the minimum version supported by the tqmd packages.
 
 However, it is recommended that the most recent versions of Numpy and Python be installed in order to achieve optimal performance and the fastest results.
 
@@ -147,6 +157,9 @@ To install the ABC algorithm for the TSP, you just need to:
     * **scout_bee_behavior():** Resets bees that haven’t improved after several trials.
     * **find_best_path():** Finds and returns the best path in the current colony.
     * **fit():** The main loop for optimizing the TSP solution using the ABC algorithm.
+    * **run_single_params():** Runs the ABC algorithm with a single set of parameters, returning parameters, the best path and its distance for that specific configuration.
+    * **grid_search_abc():** Performs a grid search over a range of parameters to find the best configuration of the algorithm for solving the TSP, allowing users to optimize performance.
+    * **print_colony():** Print information (Bee number, role, path distance and trials) about the colony.
 
 
 ## Usage
