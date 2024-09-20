@@ -4,7 +4,7 @@ Author: Angel Sanz Gutierrez
 Contact: sanzangel017@gmail.com
 GitHub: AngelS017
 Description: All clases and function to apply ABC in the TSP
-Version: 2.0.0
+Version: 2.0.1
 
 This file is the ABC algorithm for TSP, which is licensed under the MIT License.
 See the LICENSE file in the project root for more information.
@@ -162,7 +162,8 @@ class Bee:
         new_path = new_path[1:]
 
         return new_path
-    
+
+
     def mutate_path(self, distance_matrix, k):
         """
 
@@ -606,10 +607,23 @@ class ArtificialBeeColonyOptimizer:
         values = param_grid.values()
 
         combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
+        final_combinations = []
 
-        results = Parallel(n_jobs=n_jobs)(delayed(ArtificialBeeColonyOptimizer.run_single_params)(ini_end_city, distance_matrix, params) for params in combinations)
+        # The code needs that k_employed and k_onlooker need a value enven thought the mutation strategy is not k_opt
+        for params in combinations:
+            print(params)
+            if params['employed_mutation_strategy'] in ['swap', 'insertion']:
+                params['k_employed'] = 3
+            if params['onlooker_mutation_strategy'] in ['swap', 'insertion']:
+                params['k_onlooker'] = 3
 
-        for params, path, distance in results:
+            if params not in final_combinations:
+                final_combinations.append(params)
+
+        print("Number of experimets: ", len(final_combinations))
+        results = Parallel(n_jobs=n_jobs)(delayed(ArtificialBeeColonyOptimizer.run_single_params)(ini_end_city, distance_matrix, params) for params in final_combinations)
+
+        for params, _, distance in results:
             if distance < best_distance:
                 best_distance = distance
                 best_params = params
