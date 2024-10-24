@@ -31,6 +31,12 @@ License: MIT License
 
 ## Version History
 
+### [v 2.0.2] - 2024-10-x
+- Changes on how to pass the hyperparameters for the different employed and onlooker bee mutation strategies.
+- Eliminated the search for unnecessary hyperparameter combinations from the ABC algorithm thanks to the new hyperparameter step in the mutation strategies. 
+- Updated documentation (README and comments on functions)
+
+
 ### [v 2.0.0] - 2024-09-17
 - Added new functionality in ArtificialBeeColonyOptimizer: grid_search_abc()
 - Updated the minimum required Python version to 3.8
@@ -99,7 +105,7 @@ This implementation provides a flexible ABC framework, allowing users to:
 ## Prerequisites
 
 The following open source packages are used to develop this algorithm:
-* numpy >= 1.20
+* numpy >= 1.22
 * tqdm
 * joblib
 
@@ -143,16 +149,15 @@ To install the ABC algorithm for the TSP, you just need to:
     * **distance_matrix:** Matrix containing the distances between cities.
     * **employed_mutation_strategy:** The mutation strategy used by the employed bees.
     * **onlooker_mutation_strategy:** The mutation strategy used by the onlooker bees.
-    * **k_employed:** The number of edges to remove in the k-opt startegy if selected in the employed_mutation_strategy for the employed bees.
-    * **k_onlooker:** The number of edges to remove in the k-opt startegy if selected in the onlooker_mutation_strategy for the onlooker bees.
+    * **mutation_params:** All the parametrs needed for the employed_mutation_strategy and the onlooker_mutation_strategy in an dictionary format.
     * **seed:** The seed for the random numbers.
     * **verbose:** If you want to see the information after de training of the algorithm.
 
   * Methods:
     * **initialize_colony_with_roles():** Initializes the bee colony with random paths and their roles.
     * **employed_bee_behavior():** The logic behind employed bees improving their solutions.
-    * **caclulate_probabilities:** Compute the probability of choosing each solution in the colony.
-    * **roulette_wheel_selection:** Apply the roulet wheel selction to choose the best solution in the colony for the onlooker bee.
+    * **caclulate_probabilities():** Compute the probability of choosing each solution in the colony.
+    * **roulette_wheel_selection():** Apply the roulet wheel selction to choose the best solution in the colony for the onlooker bee.
     * **onlooker_bee_behavior():** Onlooker bees probabilistically select solutions and improve them.
     * **scout_bee_behavior():** Resets bees that haven’t improved after several trials.
     * **find_best_path():** Finds and returns the best path in the current colony.
@@ -176,15 +181,14 @@ distance_matrix = np.array([...]) #Square matrix of distances: cities x cities
 # Create an instance of the ABC optimizer
 abc_optimizer = ArtificialBeeColonyOptimizer(
     ini_end_city=0,  
-    population=25,  
+    population=15,  
     employed_percentage=0.5,  
     limit=2000,  
     epochs=60000,  
     distance_matrix=distance_matrix, 
     employed_mutation_strategy='k_opt',  
     onlooker_mutation_strategy='k_opt',  
-    k_employed=6,  
-    k_onlooker=6,  
+    mutation_params = {'k_employed':5, 'k_onlooker':5},  
     seed=1234, 
     verbose=1  
 )
@@ -208,7 +212,9 @@ The ArtificialBeeColonyOptimizer class allows you to customize key parameters fo
 * limit
 * epochs
 * employed_mutation_strategy and onlooker_mutation_strategy
-* k_employed and k_onlooker
+* mutation_params:
+    * k_employed
+    * k_onlooker
 
 Depending on the data, you may need to search for the optimal values of these parameters in order to get the best result (probably taking into account the time and the path distance).
 

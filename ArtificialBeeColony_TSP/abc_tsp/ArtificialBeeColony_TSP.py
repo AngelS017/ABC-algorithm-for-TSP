@@ -27,7 +27,7 @@ class Bee:
         self.path_distance = 0
         self.trial = 0
         self.mutation_strategy = self._select_mutation_strategy(mutation_strategy)
-
+ 
 
     def _select_mutation_strategy(self, mutation_strategy):
         """Selects the appropriate mutation strategy based on the provided strategy name.
@@ -55,7 +55,7 @@ class Bee:
         return all_mutation_strategies[mutation_strategy]
 
     @staticmethod
-    def swap(len_path, path, k):
+    def swap(len_path, path, **mutation_params):
         """Compute the new path, using two different indexes (except the first and the last) of the 
            actual path and change its values.
 
@@ -67,7 +67,9 @@ class Bee:
         path : array-like
             The actual path that conteins all the points, where the start and the end is the same point.
 
-        k : int
+        mutation_params : dict
+            A dictionary containing the following keys:
+                - None
 
         Returns
         -------
@@ -87,7 +89,7 @@ class Bee:
         return [new_path]
 
     @staticmethod
-    def insertion(len_path, path, k):
+    def insertion(len_path, path, **mutation_params):
         """
         
         Parameters
@@ -98,7 +100,9 @@ class Bee:
         path : array-like
             The actual path that conteins all the points, where the start and the end is the same point.
 
-        k : int
+        mutation_params : dict
+            A dictionary containing the following keys:
+                - None
 
         Returns
         -------
@@ -120,7 +124,7 @@ class Bee:
         return [new_path]
 
     @staticmethod
-    def k_opt(len_path, path, k):
+    def k_opt(len_path, path, **mutation_params):
         """Apply the k-opt method for creating a new path, where the k means the number of
            edges that is going to be remove in order to create the new conections for the path.
 
@@ -140,14 +144,19 @@ class Bee:
         path : array-like
             The actual path that conteins all the points, where the start and the end is the same point.
 
-        k : int
-            The number of the k-opt method that is going to perform
+        mutation_params : dict 
+            A dictionary containing the following keys:
+                - k : int
+                    The number of the k-opt method that is going to perform depending of the role of the bee
 
         Returns
         -------
         new_path: The new path.
 
         """
+        # Get the k value depending of the role, because maybe k_employed or k_onlooker have different values
+        k = mutation_params["k_" + mutation_params["bee_role"]]
+
         random_index = sorted(random.sample(range(1, len_path), k))
 
         segments = [path[:random_index[0]+1]]
@@ -164,7 +173,7 @@ class Bee:
         return new_path
 
 
-    def mutate_path(self, distance_matrix, k):
+    def mutate_path(self, distance_matrix, mutation_params):
         """
 
         Parameters
@@ -175,17 +184,21 @@ class Bee:
         distance_matrix: array-like
             The matrix that conteins the euclidian distance between each point.
 
-        k : int
-            The number of the k-opt method that is going to perform.
-
+        mutation_params : dict 
+            A dictionary that will contein the necesary keys and values depending of the mutation strategy
+            we are working on.
+        
         Returns
         -------
         best_path : The best path found during the generation of the new solution
 
         """
-        all_paths = self.mutation_strategy(self.path_len, self.path, k)
-        best_path = min(all_paths, key=lambda path: self.distance_path(path, distance_matrix))
+        # Add the actual bee role so the mutation startegies know which parameters values to use depending of the role
+        mutation_params['bee_role'] = self.role
 
+        all_paths = self.mutation_strategy(self.path_len, self.path, **mutation_params)
+        best_path = min(all_paths, key=lambda path: self.distance_path(path, distance_matrix))
+        
         return best_path
 
     def distance_path(self, path, distance_matrix):
@@ -213,7 +226,7 @@ class Bee:
 
 class ArtificialBeeColonyOptimizer:
     def __init__(self, ini_end_city, population, employed_percentage, limit, epochs, distance_matrix, employed_mutation_strategy, onlooker_mutation_strategy, 
-                 k_employed=3, k_onlooker=3, seed=1234, verbose=1):
+                 mutation_params=None, seed=1234, verbose=1):
         all_stategies = ['swap', 'insertion', 'k_opt']
         # Check that all parameters have the correct values
         assert ini_end_city < distance_matrix.shape[0], "You must choose a correct city"
@@ -223,9 +236,9 @@ class ArtificialBeeColonyOptimizer:
         assert onlooker_mutation_strategy in all_stategies, "Unknown onlooker mutation strategy, must be one of theese: " + ', '.join(all_stategies)
 
         if employed_mutation_strategy == 'k_opt':
-            assert k_employed >= 2, "The value of k_employed for k_opt must be 2 or more"
+            assert mutation_params['k_employed'] >= 2, "The value of k_employed for k_opt must be 2 or more"
         if onlooker_mutation_strategy == 'k_opt':
-            assert k_onlooker >= 2, "The value of k_onlooker for k_opt must be 2 or more"
+            assert mutation_params['k_onlooker'] >= 2, "The value of k_onlooker for k_opt must be 2 or more"
 
         np.random.seed(seed)
         random.seed(seed)
@@ -233,13 +246,13 @@ class ArtificialBeeColonyOptimizer:
         self.ini_end_city = ini_end_city
         self.population = population
         self.employed_percentage = employed_percentage
+        self.num_employed_bees = math.floor(population * employed_percentage)
         self.limit = limit
         self.epochs = epochs
         self.distance_matrix = distance_matrix
         self.employed_mutation_strategy = employed_mutation_strategy
         self.onlooker_mutation_strategy = onlooker_mutation_strategy
-        self.k_employed = k_employed
-        self.k_onlooker = k_onlooker
+        self.mutation_params = mutation_params
         self.verbose = verbose
         self.colony = self.initialize_colony_with_roles()
 
@@ -258,17 +271,16 @@ class ArtificialBeeColonyOptimizer:
         """
         num_cities = self.distance_matrix.shape[0]
         other_cities = np.delete(np.arange(num_cities), self.ini_end_city)
-        num_employed_bees = math.floor(self.population * self.employed_percentage)
         
         colony = []
         for i in range(self.population):
             random_path = np.insert(np.random.permutation(other_cities), [0, len(other_cities)], self.ini_end_city)
-            if i >= num_employed_bees:
+            if i >= self.num_employed_bees:
                 bee = Bee(random_path, self.onlooker_mutation_strategy)
-                bee.role = 'Onlooker'
+                bee.role = 'onlooker'
             else:
                 bee = Bee(random_path, self.employed_mutation_strategy)
-                bee.role = 'Employed'
+                bee.role = 'employed'
         
             bee.path_distance = bee.distance_path(bee.path, self.distance_matrix)
             colony.append(bee)
@@ -293,7 +305,7 @@ class ArtificialBeeColonyOptimizer:
         bee : The bee of the colony with updated parameters.
 
         """
-        new_path = bee.mutate_path(self.distance_matrix, self.k_employed)
+        new_path = bee.mutate_path(self.distance_matrix, self.mutation_params)
         new_path_distance = bee.distance_path(new_path, self.distance_matrix)
         
         if new_path_distance < bee.path_distance:
@@ -378,7 +390,7 @@ class ArtificialBeeColonyOptimizer:
         best_bee_colony = self.roulette_wheel_selection(probabilities_bee_solution)
 
         # Create a new path from the best bee found (path) local search
-        new_path = best_bee_colony.mutate_path(self.distance_matrix, self.k_onlooker)
+        new_path = best_bee_colony.mutate_path(self.distance_matrix, self.mutation_params)
         new_path_distance = best_bee_colony.distance_path(new_path, self.distance_matrix)
         
         if new_path_distance < best_bee_colony.path_distance:
@@ -408,12 +420,11 @@ class ArtificialBeeColonyOptimizer:
         None
 
         """
-        num_employed_bees = math.floor(self.population * self.employed_percentage)
 
         num_cities = self.distance_matrix.shape[0]
         other_cities = np.delete(np.arange(num_cities), self.ini_end_city)
 
-        for bee in self.colony[:num_employed_bees]:
+        for bee in self.colony[:self.num_employed_bees]:
             if bee.trial > self.limit:
                 random_path = np.insert(np.random.permutation(other_cities), [0, len(other_cities)], self.ini_end_city)
 
@@ -465,15 +476,14 @@ class ArtificialBeeColonyOptimizer:
         start = time.time()
 
         paths_distances = []
-        num_employed_bees = math.floor(self.population * self.employed_percentage)
 
         for _ in tqdm(range(self.epochs), desc="Training Progress", unit="epoch"):
-            for employed_index in range(num_employed_bees):
+            for employed_index in range(self.num_employed_bees):
                 self.employed_bee_behavior(self.colony[employed_index])
             
             probabilities_bee_solution = self.caclulate_probabilities()
             
-            for onlooker_index in range(num_employed_bees, self.population):
+            for onlooker_index in range(self.num_employed_bees, self.population):
                 self.onlooker_bee_behavior(self.colony[onlooker_index], probabilities_bee_solution)
                 
             self.scout_bee_behavior()
@@ -540,8 +550,7 @@ class ArtificialBeeColonyOptimizer:
         distance_matrix=distance_matrix,
         employed_mutation_strategy=params["employed_mutation_strategy"],
         onlooker_mutation_strategy=params["onlooker_mutation_strategy"],
-        k_employed=params["k_employed"],
-        k_onlooker=params["k_onlooker"],
+        mutation_params=params["mutation_params"],
         verbose=0
         )
 
@@ -600,25 +609,55 @@ class ArtificialBeeColonyOptimizer:
                 The distance of the best path found after refitting the model.
 
         """
+        mutation_strategies_params = {
+            'k_opt': ['k_employed', 'k_onlooker'],
+            'new_strategy': ['alfa_employed', 'beta_employed', 'alfa_onlooker', 'beta_onlooker'],
+            'swap': [],
+            'insertion': []
+        }
+
+        keys_to_keep = ['population', 'employed_percentage', 'limit', 'epochs', 
+                        'employed_mutation_strategy', 'onlooker_mutation_strategy', 
+                        'mutation_params']
+
         best_distance = np.inf
         best_params = None
 
         keys = param_grid.keys()
         values = param_grid.values()
-
         combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
         final_combinations = []
+        for test in combinations:
+            mutation_params = {}
 
-        # The code needs that k_employed and k_onlooker need a value enven thought the mutation strategy is not k_opt
-        for params in combinations:
-            print(params)
-            if params['employed_mutation_strategy'] in ['swap', 'insertion']:
-                params['k_employed'] = 3
-            if params['onlooker_mutation_strategy'] in ['swap', 'insertion']:
-                params['k_onlooker'] = 3
+            # Employed
+            employed_strategy = test['employed_mutation_strategy']
+            
+            # Get the parameters that need that employed mutation strategy
+            employed_params = mutation_strategies_params.get(employed_strategy, [])
+            # Check if the parameters neeeded for the strategy is in the dictionary and is for the employed bees
+            for param in employed_params:
+                if param in test and "employed" in param:
+                    mutation_params[param] = test.pop(param)
 
-            if params not in final_combinations:
-                final_combinations.append(params)
+            # Onlooker
+            onlooker_strategy = test['onlooker_mutation_strategy']
+            
+            # Get the parameters that need that employed mutation strategy
+            onlooker_params = mutation_strategies_params.get(onlooker_strategy, [])
+            # Check if the parameters neeeded for the strategy is in the dictionary and is for the employed bees
+            for param in onlooker_params:
+                if param in test and "onlooker" in param:
+                    mutation_params[param] = test.pop(param)
+
+            # Add the mutation_params dictionary as needed
+            test['mutation_params'] = mutation_params
+
+            # Remove the parameters of the other mutation strategies that are not used
+            test = {key: test[key] for key in keys_to_keep}
+
+            final_combinations.append(test)
 
         print("Number of experimets: ", len(final_combinations))
         results = Parallel(n_jobs=n_jobs)(delayed(ArtificialBeeColonyOptimizer.run_single_params)(ini_end_city, distance_matrix, params) for params in final_combinations)
@@ -643,8 +682,7 @@ class ArtificialBeeColonyOptimizer:
                 distance_matrix=distance_matrix,
                 employed_mutation_strategy=best_params["employed_mutation_strategy"],
                 onlooker_mutation_strategy=best_params["onlooker_mutation_strategy"],
-                k_employed=best_params["k_employed"],
-                k_onlooker=best_params["k_onlooker"],
+                mutation_params=best_params["mutation_params"],
                 verbose=0
             )
 

@@ -118,7 +118,7 @@ The testing and algorithm development were conducted in a controlled environment
 * Memory (RAM): 32 GB DDR5 at 5600 MHz
 * Graphics Card (GPU): NVIDIA GeForce RTX 3080 Ti with 12 GB VRAM
 * Operating System: Windows 11 (64-bit)
-* Python Version: 3.12.4
+* Python Version: 3.12.5
 * Key Libraries and Dependencies:
 
   * numpy 2.0.1
