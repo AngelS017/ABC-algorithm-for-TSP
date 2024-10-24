@@ -31,7 +31,7 @@ License: MIT License
 
 ## Version History
 
-### [v 2.0.2] - 2024-10-x
+### [v 2.0.2] - 2024-10-24
 - Changes on how to pass the hyperparameters for the different employed and onlooker bee mutation strategies.
 - Eliminated the search for unnecessary hyperparameter combinations from the ABC algorithm thanks to the new hyperparameter step in the mutation strategies. 
 - Updated documentation (README and comments on functions)
