@@ -4,7 +4,7 @@ Author: Angel Sanz Gutierrez
 Contact: sanzangel017@gmail.com
 GitHub: AngelS017
 Description: All clases and function to apply ABC in the TSP
-Version: 2.0.1
+Version: 2.0.3
 
 This file is the ABC algorithm for TSP, which is licensed under the MIT License.
 See the LICENSE file in the project root for more information.
@@ -18,15 +18,26 @@ import time
 import itertools
 from joblib import Parallel, delayed
 
+from numba import njit
+
+@njit
+def _distance_path_numba(path, distance_matrix):
+    total_distance = 0 
+    length_path = len(path) - 1
+    for i in range(length_path):
+        total_distance += distance_matrix[path[i], path[i + 1]]
+    return total_distance
 
 class Bee:
-    def __init__(self, random_path, mutation_strategy) -> None:
-        self.role = ''
-        self.path = random_path
-        self.path_len = len(random_path) - 2
+    def __init__(self, role, random_path, mutation_strategy, mutation_params) -> None:
+        self.role = role
+        self.path = np.asarray(random_path, dtype=np.int32)
+        # Use to select the cities to mutation startegies, except the first one and the last one
+        self.path_len = len(random_path) - 2 
         self.path_distance = 0
         self.trial = 0
         self.mutation_strategy = self._select_mutation_strategy(mutation_strategy)
+        self.mutation_params = mutation_params
  
 
     def _select_mutation_strategy(self, mutation_strategy):
@@ -76,7 +87,7 @@ class Bee:
         new_path: The new path.
 
         """
-        new_path = path[:]
+        new_path = path.copy()
 
         # Other way, but slower: random_index, random_index_2 = sorted(random.sample(range(1, len_path), 2))
         random_index = random.randint(1, len_path)
@@ -109,7 +120,7 @@ class Bee:
         new_path: The new path.
 
         """
-        new_path = path[:]
+        new_path = path.copy()
 
         random_index = random.randint(1, len_path)
         random_index_2 = random.randint(1, len_path)
@@ -160,12 +171,12 @@ class Bee:
         random_index = sorted(random.sample(range(1, len_path), k))
 
         segments = [path[:random_index[0]+1]]
-        segments.extend([path[random_index[i]+1:random_index[i+1]+1] for i in range(k-1)])
+        segments.extend(path[random_index[i]+1:random_index[i+1]+1] for i in range(k-1))
         segments.append(path[random_index[-1]+1:])
 
-        middle_segments = [[segmento, segmento[::-1]] for segmento in segments[1:-1]]
+        middle_segments = [[segment, segment[::-1]] for segment in segments[1:-1]]
 
-        possible_permutations = list(itertools.product(*middle_segments)) + list(itertools.product(*middle_segments[::-1]))
+        possible_permutations = list(itertools.chain(itertools.product(*middle_segments), itertools.product(*middle_segments[::-1])))
         
         new_path = [np.concatenate((segments[0], *perm, segments[-1])) for perm in possible_permutations]
         new_path = new_path[1:]
@@ -173,7 +184,7 @@ class Bee:
         return new_path
 
 
-    def mutate_path(self, distance_matrix, mutation_params):
+    def mutate_path(self, distance_matrix):
         """
 
         Parameters
@@ -183,24 +194,18 @@ class Bee:
 
         distance_matrix: array-like
             The matrix that conteins the euclidian distance between each point.
-
-        mutation_params : dict 
-            A dictionary that will contein the necesary keys and values depending of the mutation strategy
-            we are working on.
         
         Returns
         -------
         best_path : The best path found during the generation of the new solution
 
         """
-        # Add the actual bee role so the mutation startegies know which parameters values to use depending of the role
-        mutation_params['bee_role'] = self.role
 
-        all_paths = self.mutation_strategy(self.path_len, self.path, **mutation_params)
+        all_paths = self.mutation_strategy(self.path_len, self.path, **self.mutation_params)
         best_path = min(all_paths, key=lambda path: self.distance_path(path, distance_matrix))
-        
-        return best_path
 
+        return best_path
+    
     def distance_path(self, path, distance_matrix):
         """Compute the distance of all the points in the path.
 
@@ -220,7 +225,8 @@ class Bee:
         distance: The total distance of the path.
 
         """
-        return np.sum(distance_matrix[path[:-1], path[1:]])
+        #return np.sum(distance_matrix[path[:-1], path[1:]])
+        return _distance_path_numba(path, distance_matrix)
 
 
 
@@ -254,8 +260,15 @@ class ArtificialBeeColonyOptimizer:
         self.onlooker_mutation_strategy = onlooker_mutation_strategy
         self.mutation_params = mutation_params
         self.verbose = verbose
-        self.colony = self.initialize_colony_with_roles()
 
+        # Trade off time-memory
+        self.num_cities = self.distance_matrix.shape[0]
+        self.other_cities = np.delete(np.arange(self.num_cities), self.ini_end_city)
+        
+        # Execute always the last
+        self.colony = self.initialize_colony_with_roles()
+        
+        
     def initialize_colony_with_roles(self):
         """
 
@@ -269,19 +282,26 @@ class ArtificialBeeColonyOptimizer:
         colony : 
 
         """
-        num_cities = self.distance_matrix.shape[0]
-        other_cities = np.delete(np.arange(num_cities), self.ini_end_city)
-        
+
         colony = []
         for i in range(self.population):
-            random_path = np.insert(np.random.permutation(other_cities), [0, len(other_cities)], self.ini_end_city)
+            #random_path = np.insert(np.random.permutation(self.other_cities), [0, len(self.other_cities)], self.ini_end_city)
+            
+            random_path = np.empty(len(self.other_cities) + 2, dtype=np.int32)
+            random_path[0], random_path[-1] = self.ini_end_city, self.ini_end_city
+            random_path[1:-1] = np.random.permutation(self.other_cities)
+            
             if i >= self.num_employed_bees:
-                bee = Bee(random_path, self.onlooker_mutation_strategy)
-                bee.role = 'onlooker'
+                onlooker_mutation_params = self.mutation_params.copy()
+                onlooker_mutation_params['bee_role'] = 'onlooker'
+
+                bee = Bee('onlooker', random_path, self.onlooker_mutation_strategy, onlooker_mutation_params)
             else:
-                bee = Bee(random_path, self.employed_mutation_strategy)
-                bee.role = 'employed'
-        
+                employed_mutation_params = self.mutation_params.copy()
+                employed_mutation_params['bee_role'] = 'employed'
+
+                bee = Bee('employed', random_path, self.employed_mutation_strategy, employed_mutation_params)
+                
             bee.path_distance = bee.distance_path(bee.path, self.distance_matrix)
             colony.append(bee)
 
@@ -305,7 +325,7 @@ class ArtificialBeeColonyOptimizer:
         bee : The bee of the colony with updated parameters.
 
         """
-        new_path = bee.mutate_path(self.distance_matrix, self.mutation_params)
+        new_path = bee.mutate_path(self.distance_matrix)
         new_path_distance = bee.distance_path(new_path, self.distance_matrix)
         
         if new_path_distance < bee.path_distance:
@@ -315,7 +335,7 @@ class ArtificialBeeColonyOptimizer:
         else:
             bee.trial += 1
 
-    def caclulate_probabilities(self):
+    def calculate_probabilities(self):
         """Compute the probability of choosing each solution in the colony, where the distance path of
            each bee is divided by the sum of all distances in the colony
 
@@ -329,8 +349,10 @@ class ArtificialBeeColonyOptimizer:
         probabilities_bee_solution : The array of probabilities.
 
         """
-        path_distances = np.array([bee.path_distance for bee in self.colony], dtype=float)
-        return path_distances / np.sum(path_distances)
+
+        path_distances = np.array([bee.path_distance for bee in self.colony])
+        fitness = 1 / path_distances
+        return fitness / np.sum(fitness)
 
     def roulette_wheel_selection(self, probabilities):
         """Apply the roulet wheel selction to choose the best solution in the colony 
@@ -349,6 +371,7 @@ class ArtificialBeeColonyOptimizer:
         bee : The best bee to choose in the colony
 
         """
+
         return self.colony[np.random.choice(len(probabilities), p=probabilities)]
     
         # Another way to make roulette wheel selection, more interpretable but more computationally expensive:
@@ -387,10 +410,11 @@ class ArtificialBeeColonyOptimizer:
             This method updates the bee 
 
         """
+
         best_bee_colony = self.roulette_wheel_selection(probabilities_bee_solution)
 
         # Create a new path from the best bee found (path) local search
-        new_path = best_bee_colony.mutate_path(self.distance_matrix, self.mutation_params)
+        new_path = best_bee_colony.mutate_path(self.distance_matrix)
         new_path_distance = best_bee_colony.distance_path(new_path, self.distance_matrix)
         
         if new_path_distance < best_bee_colony.path_distance:
@@ -407,8 +431,8 @@ class ArtificialBeeColonyOptimizer:
 
     def scout_bee_behavior(self):
         """The bee will perform the scout behavior, where all the bees in the 
-       colony that have passed the threshold of trials have initialized 
-       their parameters.
+            colony that have passed the threshold of trials have initialized 
+            their parameters.
 
         Parameters
         ----------
@@ -421,17 +445,19 @@ class ArtificialBeeColonyOptimizer:
 
         """
 
-        num_cities = self.distance_matrix.shape[0]
-        other_cities = np.delete(np.arange(num_cities), self.ini_end_city)
-
         for bee in self.colony[:self.num_employed_bees]:
             if bee.trial > self.limit:
-                random_path = np.insert(np.random.permutation(other_cities), [0, len(other_cities)], self.ini_end_city)
+                #random_path = np.insert(np.random.permutation(self.other_cities), [0, len(self.other_cities)], self.ini_end_city)
+                
+                random_path = np.empty(len(self.other_cities) + 2, dtype=np.int32)
+                random_path[0], random_path[-1] = self.ini_end_city, self.ini_end_city
+                random_path[1:-1] = np.random.permutation(self.other_cities)
 
                 bee.trial = 0
                 bee.path = random_path
                 bee.path_distance = bee.distance_path(bee.path, self.distance_matrix)
 
+    
     def find_best_path(self):
         """Find the best path among all the bees in the colony and also the sitance of
            that path.
@@ -447,16 +473,20 @@ class ArtificialBeeColonyOptimizer:
         path_distance : The total distance of the best path found
 
         """
+
         min_bee = min(self.colony, key=lambda bee: bee.path_distance)
         return min_bee.path, min_bee.path_distance
 
-    def fit(self):
+    def fit(self, disable_progress_bar=False):
         """Train the ABC algorithm to find the best path in the TSP.
 
         Parameters
         ----------
         self : ArtificialBeeColonyOptimizer
             The instance of the optimizer that manages the bee colony.
+        
+        disable_progress_bar : bool
+            Wether or not to disable the progress bar of the trining process
 
         Returns
         -------
@@ -473,15 +503,16 @@ class ArtificialBeeColonyOptimizer:
             The total distance of the best path found during this run.
 
         """
+
         start = time.time()
 
         paths_distances = []
 
-        for _ in tqdm(range(self.epochs), desc="Training Progress", unit="epoch"):
+        for _ in tqdm(range(self.epochs), desc="Training Progress", unit="epoch", disable=disable_progress_bar):
             for employed_index in range(self.num_employed_bees):
                 self.employed_bee_behavior(self.colony[employed_index])
             
-            probabilities_bee_solution = self.caclulate_probabilities()
+            probabilities_bee_solution = self.calculate_probabilities()
             
             for onlooker_index in range(self.num_employed_bees, self.population):
                 self.onlooker_bee_behavior(self.colony[onlooker_index], probabilities_bee_solution)
@@ -542,19 +573,19 @@ class ArtificialBeeColonyOptimizer:
         """
 
         abc_optimizer = ArtificialBeeColonyOptimizer(
-        ini_end_city=ini_end_city,
-        population=params["population"],
-        employed_percentage=params["employed_percentage"],
-        limit=params["limit"],
-        epochs=params["epochs"],
-        distance_matrix=distance_matrix,
-        employed_mutation_strategy=params["employed_mutation_strategy"],
-        onlooker_mutation_strategy=params["onlooker_mutation_strategy"],
-        mutation_params=params["mutation_params"],
-        verbose=0
+            ini_end_city=ini_end_city,
+            population=params["population"],
+            employed_percentage=params["employed_percentage"],
+            limit=params["limit"],
+            epochs=params["epochs"],
+            distance_matrix=distance_matrix,
+            employed_mutation_strategy=params["employed_mutation_strategy"],
+            onlooker_mutation_strategy=params["onlooker_mutation_strategy"],
+            mutation_params=params["mutation_params"],
+            verbose=0
         )
 
-        _, _, final_best_path, final_best_path_distance = abc_optimizer.fit()
+        _, _, final_best_path, final_best_path_distance = abc_optimizer.fit(disable_progress_bar=True)
 
         return params, final_best_path, final_best_path_distance
 
@@ -611,7 +642,6 @@ class ArtificialBeeColonyOptimizer:
         """
         mutation_strategies_params = {
             'k_opt': ['k_employed', 'k_onlooker'],
-            'new_strategy': ['alfa_employed', 'beta_employed', 'alfa_onlooker', 'beta_onlooker'],
             'swap': [],
             'insertion': []
         }
@@ -657,11 +687,13 @@ class ArtificialBeeColonyOptimizer:
             # Remove the parameters of the other mutation strategies that are not used
             test = {key: test[key] for key in keys_to_keep}
 
-            final_combinations.append(test)
+            if test not in final_combinations:
+                final_combinations.append(test)
 
         print("Number of experimets: ", len(final_combinations))
-        results = Parallel(n_jobs=n_jobs)(delayed(ArtificialBeeColonyOptimizer.run_single_params)(ini_end_city, distance_matrix, params) for params in final_combinations)
-
+        results = Parallel(n_jobs=n_jobs)(delayed(ArtificialBeeColonyOptimizer.run_single_params)(ini_end_city, distance_matrix, params) 
+                                          for params in tqdm(final_combinations, desc="Grid Search complete"))
+        
         for params, _, distance in results:
             if distance < best_distance:
                 best_distance = distance
@@ -689,10 +721,11 @@ class ArtificialBeeColonyOptimizer:
             execution_time, paths_distances, final_best_path, final_best_path_distance = abc_optimizer.fit()
 
             output = ({
+                'best_params': best_params,
                 'execution_time': execution_time,
-                'paths_distances': paths_distances,
                 'final_best_path': final_best_path,
-                'final_best_path_distance': final_best_path_distance
+                'final_best_path_distance': final_best_path_distance,
+                'paths_distances': paths_distances,
             })
 
         return output

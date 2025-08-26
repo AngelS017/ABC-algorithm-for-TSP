@@ -35,6 +35,7 @@ The following open source packages are used to develop this project:
 * scipy
 * tqdm
 * joblib
+* numba
 
 
 Furthermore, the environment utilized for the development of the ABC algorithm for the TSP can be used directly for your purposes.
@@ -46,6 +47,8 @@ The anaconda environment can be created as follows:
 ## :gear: Installation <a id="installation"></a>
 
 Once all the prerequisites packages have been installed, the package for the algorithm Artificial Bee Colony can be installed for use in solving the Travel Salesman Problem.
+
+All the information about the package and it´s dependeces can be found in the following [link](https://pypi.org/project/abc-tsp/) from PyPI.
 
     pip install abc-tsp
 
@@ -114,10 +117,10 @@ The website provides information on the optimal solution, among other things:
 
 The testing and algorithm development were conducted in a controlled environment with the following hardware and software configuration:
 
-* Processor (CPU): Intel Core i9-14900HX up to 5.8 GHz Max Turbo (24 cores, 32 threads)
+* Processor (CPU): Intel Core i9-12900K up to 5.2 GHz Max Turbo (16 cores, 24 threads)
 * Memory (RAM): 32 GB DDR5 at 5600 MHz
 * Graphics Card (GPU): NVIDIA GeForce RTX 3080 Ti with 12 GB VRAM
-* Operating System: Windows 11 (64-bit)
+* Operating System: Ubuntu 24.04 (64-bit)
 * Python Version: 3.12.5
 * Key Libraries and Dependencies:
 
@@ -126,11 +129,77 @@ The testing and algorithm development were conducted in a controlled environment
   * pandas 2.2.2
   * tqdm 4.66.5
   * scipy 1.14.0
-
+  * joblib 1.5.1
+  * numba 0.61.2
 
 Benchmark results and time analyses are included in the Results section of this repository.
 
 
 ## :mag_right: Results and Discussion <a id="results-and-discussion"></a>
 
+<p align="center">
+  <img src="images/project_analysis/Swap.png" width="33%">
+  <img src="images/project_analysis/Insertion.png" width="33%">
+  <img src="images/project_analysis/K-opt.png" width="33%">
+</p>
+
+Has we can see with the following configuration of the hyperparams of the ABC model, the best mutation operator is the k-opt in this case the 3-opt.
+
+Even though the k-opt operator can be the best operator for this specific dataset we provided yoy a function to found the best hyperparams, call grid_search_abc() which performs a GridSearch of all the values specified.
+
+After executing the GridSearch with the following hyperparams:
+```
+param_grid = {
+  "population": [10, 15, 25],
+  "employed_percentage": [0.7, 0.8],
+  "limit": [2000, 3000, 5000, 6000],
+  "epochs": [20000, 60000, 80000, 100000],
+  "employed_mutation_strategy": ['swap', 'insertion', 'k_opt'],
+  "onlooker_mutation_strategy": ['swap', 'insertion', 'k_opt'],
+  "k_employed": [4, 6],
+  "k_onlooker": [4, 6],
+}
+```
+
+The best hyperparams are:
+* population: 10
+* employed_percentage: 0.7
+* limit: 6000
+* epochs: 100000
+* employed_mutation_strategy: 'k-opt'
+* k_employed: 6
+* onlooker_mutation_strategy: swap
+
+Now we can perform and study of this model in comparison with the optimal solution and results of that conficguration.
+
+<p align="center">
+  <img src="images/project_analysis/Best_ABC_model.png" width="90%">
+</p>
+
+
+There is no need to increase the number of training epochs to try to improve the model, since we found that the minimum is already reached before reaching the established epoch limit.
+
+
+In the following image, we can see how performance evolves over training time. On the left, we see the improved distance per 10,000 epochs, and on the right, we see the same result but as a percentage. We can see that after 40,000 or 50,000 epochs, performance stagnates and converges to a minimum:
+
+<p align="center">
+  <img src="images/project_analysis/Improvements_best_model.png" width="90%">
+</p>
+
+
+Now it is useful to compare the execution time and distance of the best path found with respect to the optimal solution provided (found with the Concorde algorithm).
+
+We verify that the ABC algorithm finds a solution in 93.6% less time, bearing in mind that this is achieved by having previously found the best combination of hyperparameters.  
+
+At the same time, the solution found by the ABC algorithm is 13.7% worse than the optimal one. 
+
+<p align="center">
+  <img src="images/project_analysis/Comparison_optimal_solution.png" width="90%">
+</p>
+
+
 ## :link: References <a id="references"></a>
+
+Wang, Y., Jiao, J., Liu, J., & Xiao, R. (2022). A labor division artificial bee colony algorithm based on behavioral development. Information Sciences, 606, 152–172. https://doi.org/https://doi.org/10.1016/j.ins.2022.05.065
+
+Karaboğa, D. (2005). An idea based on honey bee swarm for numerical optimization. Technical Report-TR06, Erciyes University, Engineering Faculty, Computer Engineering Department.

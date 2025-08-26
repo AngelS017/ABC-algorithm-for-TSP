@@ -31,6 +31,10 @@ License: MIT License
 
 ## Version History
 
+### [v 2.0.3] - 2025-08-25
+- Optimized the function distance_path() with numba, able to perform significantly faster distance calculations
+- Improved GridSearch efficiency by preventing the evaluation of duplicate hyperparameter combinations, resulting in a faster search process.
+
 ### [v 2.0.2] - 2024-10-24
 - Changes on how to pass the hyperparameters for the different employed and onlooker bee mutation strategies.
 - Eliminated the search for unnecessary hyperparameter combinations from the ABC algorithm thanks to the new hyperparameter step in the mutation strategies. 
@@ -108,6 +112,7 @@ The following open source packages are used to develop this algorithm:
 * numpy >= 1.22
 * tqdm
 * joblib
+* numba
 
 Additionally, the software requires the Python 3.8 or higher version, as this is the minimum version supported by the tqmd packages.
 
