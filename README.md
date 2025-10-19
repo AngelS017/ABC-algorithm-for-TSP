@@ -26,6 +26,10 @@
 
 ## :memo: About The Project <a id="about-the-project"></a>
 
+This repository gathers the implementation, experimentation and analysis of a variant of the **Artificial Bee Colony (ABC)** algorithm applied to the **Traveling Salesman Problem (TSP)**. What is presented here is a practical and reproducible study whose primary goal is to evaluate how different techniques for generating new solutions (mutation operators: swap, insertion, k-opt) and hyperparameter configurations affect tour quality and computational cost on a real instance (the **Luxembourg dataset** from the University of Waterloo collection).
+
+The project includes a modular Python implementation (installable package abc-tsp), utilities to load .tsp files, compute Euclidean distances and evaluate tours, and a notebook that walks through the experimental workflow (training, hyperparameter grid search via grid_search_abc(), and result visualization). Comparative tests show that k-opt operators achieve the best solutions for this instance, using the best hyperparameter combination found out that the **ABC** solver reaches **competitive solutions** in far less time than the exact solver (**Concorde**), although the final tour length remains slightly larger.
+
 ## :wrench: Prerequisites <a id="prerequisites"></a>
 
 The following open source packages are used to develop this project:
@@ -201,5 +205,6 @@ At the same time, the solution found by the ABC algorithm is 13.7% worse than th
 ## :link: References <a id="references"></a>
 
 Wang, Y., Jiao, J., Liu, J., & Xiao, R. (2022). A labor division artificial bee colony algorithm based on behavioral development. Information Sciences, 606, 152–172. https://doi.org/https://doi.org/10.1016/j.ins.2022.05.065
+
 
 Karaboğa, D. (2005). An idea based on honey bee swarm for numerical optimization. Technical Report-TR06, Erciyes University, Engineering Faculty, Computer Engineering Department.
